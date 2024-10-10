@@ -1,7 +1,7 @@
 # matVAE: A Matrix Variational Auto-Encoder for Variant Effect Prediction in Pharmacogenes
 Manuscript submitted to ICLR 2025
 
-## Getting started
+## Getting started (Ubuntu 22.04)
 - Create a python3 environment, activate it, install packages in `requirements.txt` file: 
 ```bash
 virtualenv -p python3 pyenv
