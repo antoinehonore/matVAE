@@ -13,19 +13,19 @@ import lightning as L
 from torcheval.metrics.functional import r2_score, binary_auprc, binary_auroc, binary_precision, binary_recall, binary_f1_score, binary_accuracy
 from torchmetrics.functional.regression.spearman import _spearman_corrcoef_compute
 import sys
-import torchsort
+#import torchsort
 import math
 
 
-def diff_spearmanr(pred, target, **kw):
-    """pred and target should be Float tensors of size (batch_size,)"""
-    pred_r = torchsort.soft_rank(pred.unsqueeze(0), **kw)
-    target_r = torchsort.soft_rank(target.unsqueeze(0), **kw)
-    pred_r = pred_r - pred_r.mean()
-    pred_r = pred_r / pred_r.norm()
-    target_r = target_r - target_r.mean()
-    targtarget_ret = target_r / target_r.norm()
-    return (pred_r * target).squeeze(0)
+#def diff_spearmanr(pred, target, **kw):
+#    """pred and target should be Float tensors of size (batch_size,)"""
+#    pred_r = torchsort.soft_rank(pred.unsqueeze(0), **kw)
+#    target_r = torchsort.soft_rank(target.unsqueeze(0), **kw)
+#    pred_r = pred_r - pred_r.mean()
+#    pred_r = pred_r / pred_r.norm()
+#    target_r = target_r - target_r.mean()
+#    targtarget_ret = target_r / target_r.norm()
+#    return (pred_r * target).squeeze(0)
 
 
 def get_info(theloader_dict):
