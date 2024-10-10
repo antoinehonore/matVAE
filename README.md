@@ -1,5 +1,4 @@
 # matVAE: A Matrix Variational Auto-Encoder for Variant Effect Prediction in Pharmacogenes
-Manuscript submitted to ICLR 2025
 
 ## Prerequisite
 Download the data folder (2.3G):
