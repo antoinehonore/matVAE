@@ -55,4 +55,13 @@ jupyter notebook
 Results can be plotted from `results/results.ipynb` 
 
 ## Checkpoints
+Download and uncompress the checkpoints (79G):
+- https://kth-my.sharepoint.com/:u:/g/personal/honore_ug_kth_se/ESpoHL-BbeVCs2nfiYVq3X8BqW4jP1TGkRvjkGMK25sizw?e=Obsdoc
+
+- Uncompress (105G)
+
+```bash
+tar -xzf lightning_logs.tar.gz
+```
+
 Checkpoints can be loaded from `results/models.ipynb` 
