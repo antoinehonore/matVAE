@@ -3,9 +3,10 @@ Manuscript submitted to ICLR 2025
 
 ## Prerequisite
 Download the data folder (2.3G):
-- ![https://kth-my.sharepoint.com](https://kth-my.sharepoint.com/:u:/g/personal/honore_ug_kth_se/EX7yu-YfM8ZApwoS5W_kUzYBevhAS-a-h0rcym7h8zeU5A?e=AIsDvE)
+- https://kth-my.sharepoint.com/:u:/g/personal/honore_ug_kth_se/EX7yu-YfM8ZApwoS5W_kUzYBevhAS-a-h0rcym7h8zeU5A?e=pNH2ku
 
 - Uncompress (6.4G)
+
 ```bash
 tar -xzf data.tar.gz
 ```
