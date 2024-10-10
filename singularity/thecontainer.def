@@ -1,0 +1,22 @@
+BootStrap: docker
+From: continuumio/anaconda3
+
+%runscript
+
+     echo "Starting notebook..."
+     echo "Open browser to localhost:12888"
+     exec /opt/conda/bin/jupyter notebook --notebook-dir=/opt/notebooks --ip='*' --port=12888 --no-browser --allow-root
+
+%files
+    ../requirements.txt /requirements.txt
+
+%post
+     apt-get update
+     apt-get install -y build-essential jq make
+     # Install jupyter notebook
+     /opt/conda/bin/conda install jupyter -y --quiet
+     mkdir /opt/notebooks
+     apt-get autoremove -y
+     apt-get clean
+     pip install -r /requirements.txt
+

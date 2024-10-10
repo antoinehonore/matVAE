@@ -1,0 +1,17 @@
+git+https://git@gitlab.com/antoinehonore/utils_results_analysis.git
+git+https://gitlab.com/antoinehonore/utils_tbox.git
+git+https://git@gitlab.com/antoinehonore/utils_plots.git
+git+https://git@gitlab.com/antoinehonore/utils_models.git
+numpy
+pandas
+matplotlib
+scipy
+biographs
+scikit-learn
+parse
+unidecode
+torch
+plotly
+tensorboard
+lightning
+torch_geometric
