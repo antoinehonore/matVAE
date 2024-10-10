@@ -49,7 +49,7 @@ python -m ipykernel install --user --name=pymatVAE
 
 Start a jupyter notebook server:
 ```bash
-    jupyter notebook
+jupyter notebook
 ```
 
 ## Plotting results
