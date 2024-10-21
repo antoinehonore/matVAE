@@ -69,5 +69,6 @@ The logs are organized as follows: [model_name]/[protein number]/[fold number]/[
 - `protein number` corresponds to the number of a config file for a given `model_name`.
 - `fold number` corresponds to the fold used for testing the model when the model is trained on DMS data. For MSA trained data, we do not use cross-validation and thus only fold0 is available.
 - `version number` differs from 0 when the same configuration file is run multiple times.
+- `checkpoints` contains the model checkpoint for a given model and protein.
 
-Checkpoints can be loaded from `results/models.ipynb` 
+Checkpoints can be loaded from the `results/models.ipynb` notebook.
