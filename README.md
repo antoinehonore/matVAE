@@ -64,9 +64,9 @@ Download and uncompress the checkpoints (79G):
 tar -xzf lightning_logs.tar.gz
 ```
 
-The logs are organized as follows: [model_name]/[protein number]/[fold number]/[version number]/checkpoints
-- `model_name` corresponds to the name of a config file in `configs`
-- `protein number` corresponds to the number of a config file for a given `model_name`.
+The logs are organized as follows: `model_name`/`protein_number`/`fold_number`/`version_number`/`checkpoints`
+- `model_name` corresponds to the name of a config file in the `configs/` folder.
+- `protein number` corresponds to the index of a config file in a `configs/model_name` folder.
 - `fold number` corresponds to the fold used for testing the model when the model is trained on DMS data. For MSA trained data, we do not use cross-validation and thus only fold0 is available.
 - `version number` differs from 0 when the same configuration file is run multiple times.
 - `checkpoints` contains the model checkpoint for a given model and protein.
