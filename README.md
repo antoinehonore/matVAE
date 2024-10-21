@@ -41,7 +41,7 @@ tensorboard --logdir=lightning_logs --port 6006
 Then open http://localhost:6006 in a browser
 
 # Results and checkpoints
-Make sure that your virtual environment is installed in jupyter:
+Install the virtual environment in Jupyter and give the name `pymatVAE`:
 ```bash
 python -m ipykernel install --user --name=pymatVAE
 ```
