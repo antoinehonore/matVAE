@@ -55,13 +55,14 @@ jupyter notebook
 Results can be plotted from `results/results.ipynb` 
 
 ## Checkpoints
-Download and uncompress the checkpoints (79G):
-- https://kth-my.sharepoint.com/:u:/g/personal/honore_ug_kth_se/ESpoHL-BbeVCs2nfiYVq3X8BqW4jP1TGkRvjkGMK25sizw?e=Obsdoc
+Download and uncompress the checkpoints:
+- All proteins (79G, uncompressed: 105G): https://kth-my.sharepoint.com/:u:/g/personal/honore_ug_kth_se/ESpoHL-BbeVCs2nfiYVq3X8BqW4jP1TGkRvjkGMK25sizw?e=Obsdoc
+- Only CP2C9 protein (419MB, 715MB): https://kth-my.sharepoint.com/:u:/g/personal/honore_ug_kth_se/EYmTeoV2nZtLnbseSxj_HH8BtgbrIHgGGkoK65APjHdehw?e=dhs9En
 
-- Uncompress (105G)
+- Uncompress with e.g.
 
 ```bash
-tar -xzf lightning_logs.tar.gz
+tar -xzf lightning_logs_cp2c9.tar.gz
 ```
 
 The logs are organized as follows: `model_name`/`protein_number`/`fold_number`/`version_number`/`checkpoints`
