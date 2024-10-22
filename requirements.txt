@@ -15,3 +15,5 @@ plotly
 tensorboard
 lightning
 torch_geometric
+jupyter
+notebook
