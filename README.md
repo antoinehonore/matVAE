@@ -41,7 +41,7 @@ tensorboard --logdir=lightning_logs --port 6006
 Then open http://localhost:6006 in a browser
 
 # Results and checkpoints
-Make sure that your virtual environment is installed in jupyter:
+Install the virtual environment in Jupyter and give the name `pymatVAE`:
 ```bash
 python -m ipykernel install --user --name=pymatVAE
 ```
@@ -55,13 +55,21 @@ jupyter notebook
 Results can be plotted from `results/results.ipynb` 
 
 ## Checkpoints
-Download and uncompress the checkpoints (79G):
-- https://kth-my.sharepoint.com/:u:/g/personal/honore_ug_kth_se/ESpoHL-BbeVCs2nfiYVq3X8BqW4jP1TGkRvjkGMK25sizw?e=Obsdoc
+Download and uncompress the checkpoints:
+- All proteins (79G, uncompressed: 105G): https://kth-my.sharepoint.com/:u:/g/personal/honore_ug_kth_se/ESpoHL-BbeVCs2nfiYVq3X8BqW4jP1TGkRvjkGMK25sizw?e=Obsdoc
+- Only CP2C9 protein (419MB, 715MB): https://kth-my.sharepoint.com/:u:/g/personal/honore_ug_kth_se/EYmTeoV2nZtLnbseSxj_HH8BtgbrIHgGGkoK65APjHdehw?e=dhs9En
 
-- Uncompress (105G)
+- Put the .tar.gz in the root directory of the repo and uncompress with e.g.
 
 ```bash
-tar -xzf lightning_logs.tar.gz
+tar -xzf lightning_logs_cp2c9.tar.gz
 ```
 
-Checkpoints can be loaded from `results/models.ipynb` 
+The logs are organized as follows: `model_name`/`protein_number`/`fold_number`/`version_number`/`checkpoints`
+- `model_name` corresponds to the name of a config file in the `configs/` folder.
+- `protein_number` corresponds to the index of a config file in a `configs/model_name` folder.
+- `fold_number` corresponds to the fold used for testing the model when the model is trained on DMS data. For MSA trained data, we do not use cross-validation and thus only fold0 is available.
+- `version_number` differs from 0 when the same configuration file is run multiple times.
+- `checkpoints` contains the model checkpoint for a given model and protein.
+
+Checkpoints can be loaded from the `results/models.ipynb` notebook.
