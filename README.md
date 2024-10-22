@@ -57,8 +57,8 @@ Results can be plotted from `results/results.ipynb`
 ## Checkpoints
 Download and uncompress the checkpoints:
 - All proteins (79G, uncompressed: 105G): https://kth-my.sharepoint.com/:u:/g/personal/honore_ug_kth_se/ESpoHL-BbeVCs2nfiYVq3X8BqW4jP1TGkRvjkGMK25sizw?e=Obsdoc
-- Only CP2C9 protein (419MB, 715MB): https://kth-my.sharepoint.com/:u:/g/personal/honore_ug_kth_se/EYmTeoV2nZtLnbseSxj_HH8BtgbrIHgGGkoK65APjHdehw?e=dhs9En
-
+- Only CP2C9 protein (400MB, uncompressed: 715MB): https://kth-my.sharepoint.com/:u:/g/personal/honore_ug_kth_se/EYmTeoV2nZtLnbseSxj_HH8BtgbrIHgGGkoK65APjHdehw?e=dhs9En
+- Only TPMT (358MB, uncompressed: 525MB): https://kth-my.sharepoint.com/:u:/g/personal/honore_ug_kth_se/EZKb5dEQpw1FtLjup-2d6ZYBIrAd9Oq3WhYzz5WtIRW8QQ?e=7S2lgi
 - Put the .tar.gz in the root directory of the repo and uncompress with e.g.
 
 ```bash
