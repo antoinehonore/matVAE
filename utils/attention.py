@@ -7,12 +7,7 @@ from utils.activations import get_activation
 from utils.mlp import create_nn_sequential_MLP, MLP
 
 
-#selu_feature_map = ActivationFunctionFeatureMap.factory(
-#    lambda x: torch.nn.functional.selu(x)
-#)
-#relu_feature_map = ActivationFunctionFeatureMap.factory(
-#    lambda x: torch.nn.functional.relu(x)
-#)
+
 
 class SelfAttentionLayer(torch.nn.Module):
 
@@ -41,7 +36,7 @@ class SelfAttentionLayer(torch.nn.Module):
             #self.attn_mask = None
         #else:
         self.attn = torch.nn.functional.scaled_dot_product_attention
-            #self.attn_mask = attn_mask
+        #self.attn_mask = attn_mask
 
         self.in_net = nn.Sequential(*[
             torch.nn.Conv1d(in_dim, key_dim, kernel_size=(self.kernel_size,), stride=(1,), padding=(self.kernel_size//2,)),
@@ -54,27 +49,35 @@ class SelfAttentionLayer(torch.nn.Module):
             self.fc_output = nn.Linear(self.out_dim*self.num_heads, self.out_dim)
         
         self.internal_metrics = {}
-    
-    #def linear_scaled_dot_product(self, queries, keys, values, attn_mask=None):
-    #        Q = self.feature_map(queries).view(*queries.shape[:2],self.num_heads,self.key_dim)#[:,:,None,:]
-    #        K = self.feature_map(keys).view(*keys.shape[:2],self.num_heads,self.key_dim) #[:,:,None,:]
-    #        values = values.view(*values.shape[:2],self.num_heads,self.out_dim)
+    """ 
+    relu_feature_map=lambda x:x
+
+    selu_feature_map = ActivationFunctionFeatureMap.factory(
+        lambda x: torch.nn.functional.selu(x)
+    )
+    relu_feature_map = ActivationFunctionFeatureMap.factory(
+        lambda x: torch.nn.functional.relu(x)
+    )
+    def linear_scaled_dot_product(self, queries, keys, values, attn_mask=None):
+            Q = self.feature_map(queries).view(*queries.shape[:2],self.num_heads,self.key_dim)#[:,:,None,:]
+            K = self.feature_map(keys).view(*keys.shape[:2],self.num_heads,self.key_dim) #[:,:,None,:]
+            values = values.view(*values.shape[:2],self.num_heads,self.out_dim)
 
             # Compute the KV matrix, namely the dot product of keys and values so
             # that we never explicitly compute the attention matrix and thus
             # decrease the complexity
-    #        KV = torch.einsum("nthd,nthm->nhmd", K, values)
+            KV = torch.einsum("nthd,nthm->nhmd", K, values)
 
             # Compute the normalizer
-    #        Z = 1/(torch.einsum("nthd,nhd->nth", Q, K.sum(dim=1))+self.eps)
+            Z = 1/(torch.einsum("nthd,nhd->nth", Q, K.sum(dim=1))+self.eps)
 
             # Finally compute and return the new values
-    #        V = torch.einsum("nthd,nhmd,nth->nthm", Q, KV, Z)
-    #        V = V.flatten(start_dim=2,end_dim=3)
-    #        if self.num_heads>1:
-    #            V = self.fc_output(V)
-    #        return V
-
+            V = torch.einsum("nthd,nhmd,nth->nthm", Q, KV, Z)
+            V = V.flatten(start_dim=2,end_dim=3)
+            if self.num_heads>1:
+                V = self.fc_output(V)
+            return V
+    """
     
     def forward(self, x, attn_mask=None, xref=None):
         """x are (N, L, D)"""
