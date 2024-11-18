@@ -13,7 +13,7 @@ tar -xzf data.tar.gz
 ## Getting started (Ubuntu 22.04)
 - Clone this repo as well as the protein gym repo to get benchmark
 ```bash
-git clone https://github.com/barketplace/matVAE
+git clone https://github.com/barketplace/matVAE.git
 git clone https://github.com/OATML-Markslab/ProteinGym.git
 cd matVAE
 ```
