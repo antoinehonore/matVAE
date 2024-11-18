@@ -11,6 +11,13 @@ tar -xzf data.tar.gz
 ```
 
 ## Getting started (Ubuntu 22.04)
+- Clone this repo as well as the protein gym repo to get benchmark
+```bash
+git clone https://github.com/barketplace/matVAE
+git clone https://github.com/OATML-Markslab/ProteinGym.git
+cd matVAE
+```
+
 - Create a python3 environment, activate it, install packages in `requirements.txt` file: 
 ```bash
 virtualenv -p python3 pyenv
