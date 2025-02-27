@@ -1,13 +1,9 @@
 import torch
 import torch.nn as nn
-
-#from fast_transformers.attention import LinearAttention
-#from fast_transformers.feature_maps import elu_feature_map,ActivationFunctionFeatureMap
 from utils.activations import get_activation
-from utils.mlp import create_nn_sequential_MLP, MLP
+from utils.mlp import MLP
 
-
-
+the_feature_map=lambda x: x
 
 class SelfAttentionLayer(torch.nn.Module):
 
@@ -22,42 +18,44 @@ class SelfAttentionLayer(torch.nn.Module):
         self.in_dim = in_dim
         self.kernel_size = kernel_size
         self.dropout_p = dropout_p
-
+        
         #assert (self.key_dim % self.num_heads)==0, "Num head should divide, key_dim"
         #assert (self.out_dim % self.num_heads)==0, "Num head should divide, out_dim"
         self.conv_Q = torch.nn.Conv1d(self.in_dim, self.key_dim*self.num_heads, kernel_size=self.kernel_size, bias=True, padding=self.kernel_size//2)
         self.conv_K = torch.nn.Conv1d(self.in_dim, self.key_dim*self.num_heads, kernel_size=self.kernel_size, bias=True, padding=self.kernel_size//2)
         self.conv_V = torch.nn.Conv1d(self.in_dim, self.out_dim*self.num_heads, kernel_size=self.kernel_size, bias=True, padding=self.kernel_size//2)
-        #self.feature_map = relu_feature_map(self.key_dim)
+        self.feature_map = the_feature_map(self.key_dim)
         self.eps = 1e-6
 
-        #if linear:
-        #    self.attn = self.linear_scaled_dot_product#
+        if linear:
+            self.attn = self.linear_scaled_dot_product#
             #self.attn_mask = None
-        #else:
-        self.attn = torch.nn.functional.scaled_dot_product_attention
-        #self.attn_mask = attn_mask
+        else:
+            self.attn = torch.nn.functional.scaled_dot_product_attention
+            #self.attn_mask = attn_mask
 
         self.in_net = nn.Sequential(*[
             torch.nn.Conv1d(in_dim, key_dim, kernel_size=(self.kernel_size,), stride=(1,), padding=(self.kernel_size//2,)),
             torch.nn.ReLU(), 
             torch.nn.Conv1d(key_dim, key_dim, kernel_size=(self.kernel_size,), stride=(1,), padding=(self.kernel_size//2,)), 
-            #torch.nn.ReLU()
             ])
 
         if self.num_heads > 1:
             self.fc_output = nn.Linear(self.out_dim*self.num_heads, self.out_dim)
         
         self.internal_metrics = {}
-    """ 
-    relu_feature_map=lambda x:x
+    """
+    from fast_transformers.attention import LinearAttention
+    from fast_transformers.feature_maps import elu_feature_map,ActivationFunctionFeatureMap
 
     selu_feature_map = ActivationFunctionFeatureMap.factory(
         lambda x: torch.nn.functional.selu(x)
     )
-    relu_feature_map = ActivationFunctionFeatureMap.factory(
+    the_feature_map = ActivationFunctionFeatureMap.factory(
         lambda x: torch.nn.functional.relu(x)
     )
+
+
     def linear_scaled_dot_product(self, queries, keys, values, attn_mask=None):
             Q = self.feature_map(queries).view(*queries.shape[:2],self.num_heads,self.key_dim)#[:,:,None,:]
             K = self.feature_map(keys).view(*keys.shape[:2],self.num_heads,self.key_dim) #[:,:,None,:]
@@ -110,7 +108,7 @@ class MultiSelfAttention(torch.nn.Module):
             [SelfAttentionLayer(
                 in_dim if i==0 else key_dim, key_dim, 
                 out_dim if i == (num_layers-1) else key_dim, 
-                num_heads, linear= attn_mask is None, 
+                num_heads, linear= False, 
                 kernel_size=kernel_size, dropout_p=dropout_p
                 ) for i in range(num_layers)]
         )

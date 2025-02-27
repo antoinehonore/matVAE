@@ -10,10 +10,11 @@ biographs
 scikit-learn
 parse
 unidecode
-torch
 plotly
 tensorboard
+nbformat
+torch==2.4.1
 lightning
 torch_geometric
-jupyter
-notebook
+statsmodels
+kaleido

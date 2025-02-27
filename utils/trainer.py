@@ -13,19 +13,8 @@ import lightning as L
 from torcheval.metrics.functional import r2_score, binary_auprc, binary_auroc, binary_precision, binary_recall, binary_f1_score, binary_accuracy
 from torchmetrics.functional.regression.spearman import _spearman_corrcoef_compute
 import sys
-#import torchsort
 import math
 
-
-#def diff_spearmanr(pred, target, **kw):
-#    """pred and target should be Float tensors of size (batch_size,)"""
-#    pred_r = torchsort.soft_rank(pred.unsqueeze(0), **kw)
-#    target_r = torchsort.soft_rank(target.unsqueeze(0), **kw)
-#    pred_r = pred_r - pred_r.mean()
-#    pred_r = pred_r / pred_r.norm()
-#    target_r = target_r - target_r.mean()
-#    targtarget_ret = target_r / target_r.norm()
-#    return (pred_r * target).squeeze(0)
 
 
 def get_info(theloader_dict):
@@ -38,18 +27,17 @@ class lightningdmsEVE(L.LightningModule):
     def __init__(self, model=None, hparams=None):
         super(lightningdmsEVE, self).__init__()
         self.model =              model
-        training_parameters =     hparams["training_parameters"]
-        self.training_parameters = training_parameters
+        self.training_parameters = hparams["training_parameters"]
         self.loss_fun =           self.training_parameters["loss_fun"]
         
 
         self.x_recon_figure     = plt.subplots(1,2, figsize=(10,6))
         self.y_recon_figure     = plt.subplots(figsize=(10,6))
-        
         self.val_x_recon_figure = plt.subplots(1,2, figsize=(10,6))
         self.val_y_recon_figure = plt.subplots(figsize=(10,6))
         self.val_elbo_figure =    plt.subplots(figsize=(10,6))
         self.val_score_figure =   plt.subplots(1,2,figsize=(10, 6))
+        self.val_boxplot_figure =   plt.subplots()
 
 
         self.plot_batch_index   = self.training_parameters["plot_batch_index"]
@@ -65,14 +53,13 @@ class lightningdmsEVE(L.LightningModule):
 
     def on_train_start(self):
         self.logger.log_hyperparams(self.hparams, 
-        {"hp/x_mse/val": torch.nan, "hp/x_mse/train": torch.nan,"hp/max_grad": torch.nan,"hp/earlystop_metric": torch.nan})
+        {"hp/x_mse/val": torch.nan, "hp/x_mse/train": torch.nan,"hp/max_grad": torch.nan,"hp/earlystop_metric": torch.nan, "val_neg_ELBO":torch.nan})
 
-        self.val_scores = {} # {k: [] for k in self.trainer.val_dataloaders_info["name"] if k.startswith("dms")}
+        self.val_scores = {} 
         self.val_scores_msa = {}
         self.val_scores_dms = {}
 
     def training_step(self, batch, batch_idx, dataloader_idx=0):
-        #optim = self.optimizers()
         
         loss = 0.0
         log_dict = {}
@@ -89,27 +76,21 @@ class lightningdmsEVE(L.LightningModule):
         elif isinstance(self.training_parameters["use_dms"], float) or isinstance(self.training_parameters["use_dms"], int):
             use_dms = (self.the_training_step >= self.training_parameters["num_training_steps"]*self.training_parameters["use_dms"]) and ("dms" in batch.keys())
         
-
         if use_dms:
             x_dms = self.get_input_data(batch["dms"])
-            
-            xhat_dms, latent_output_dms = self.model.forward(x_dms, stochastic_latent=False)
             N = x_dms.shape[0]
-
-            # Compute loss
-            y_true = batch["dms"][self.training_parameters["latent_to_dms_target"]].to(torch.float)
-            y_pred = latent_output_dms["y_hat_dms"].flatten()
+            score_str = self.training_parameters["latent_to_dms_target"]
             
-            if self.training_parameters["latent_to_dms_loss"] == "mse":
-                loss_dms =  F.mse_loss(y_pred, y_true, reduction="none").mean() #/ (y_true.square().mean())
-            elif self.training_parameters["latent_to_dms_loss"] == "ce":
-                loss_dms =  F.cross_entropy(y_pred.log(), y_true, reduction="none") / N
+            y_true = torch.concat([batch["dms"][ss].to(torch.float).unsqueeze(-1) for ss in score_str.split("+")],dim=-1)
+            
+            # Compute loss
+            loss_dms,_ = self.model.compute_loss(x_dms, y=y_true, stochastic_latent=False)
             
             log_dict = { **log_dict,
                         "train_loss_dms": loss_dms
                     }
 
-            loss += loss_dms
+            loss += loss_dms*self.training_parameters["use_dms_factor"]
         
         use_msa = (not ("dms" in batch.keys())) or (not use_dms) or (("msa" in batch.keys()) and (not use_dms_only))
 
@@ -117,19 +98,16 @@ class lightningdmsEVE(L.LightningModule):
         if use_msa:
             x = self.get_input_data(batch["msa"])
             N = x.shape[0]
-
-            xhat, latent_output = self.model.forward(x)
             
-            if "KLD_params" in latent_output.keys():
-                latent_output["KLD_params"] = latent_output["KLD_params"]/batch["msa"]["Neff"][0]
-                latent_output["KLD"] = latent_output["KLD"] + self.training_parameters["kl_global_params_scale"]*latent_output["KLD_params"]
+            warm_up_scale = annealing_factor(self.training_parameters["annealing_warm_up"], self.the_training_step)
+            beta = self.training_parameters["kl_latent_scale"]    ###(self.the_training_step+1)/self.training_parameters["num_training_steps"]
+            neg_ELBO, latent_output, x_CE = self.model.compute_loss(x, beta=beta, kl_global_params_scale=warm_up_scale*self.training_parameters['kl_global_params_scale'])
 
-            neg_ELBO, KLD_latent, x_CE, = self.loss_function(xhat, x, latent_output, reconstruction_error=self.model.reconstruction_error)
             loss_msa = neg_ELBO.mean()
             
             log_dict = { **log_dict,"train_neg_ELBO": neg_ELBO.mean(), 
                         "train_x_CE": x_CE.mean(),  ### "train_y_CE": CE_dict["y"].mean(),
-                        "train_KLD_latent": KLD_latent.mean(), 
+                        "train_KLD_latent": latent_output["KLD"].mean(), 
                         "train_mu": latent_output["mu"].mean(),
                         "train_logvar": latent_output["log_var"].mean()
                         }
@@ -148,38 +126,7 @@ class lightningdmsEVE(L.LightningModule):
         
     def on_validation_epoch_start(self):
         self.trainer.val_dataloaders_info = get_info(self.trainer.val_dataloaders)
-        #print("")
-
-    def loss_function(self, logits, x, latent_output, reconstruction_error="CE"):
-        """"""
-        #logits = xhat #self.get_reconstruction_data(yhat, batch)
-
-        # KLD between Normal and N(z_mu, z_sigma)
-        KLD_latent = latent_output["KLD"]
-
-        cat_loss_name = "BCE" if ("BCE" in reconstruction_error) else "CE"
-        x_CE = 0
-        
-        if cat_loss_name == "CE":
-            """In this case prediction should be unnormalized"""
-            x_CE = F.cross_entropy(logits.transpose(1,2), x.transpose(1,2), reduction="none").mean(1)#nll_loss(log_xhat.transpose(1,2), torch.argmax(x, dim=-1), reduction='none')
-        
-        elif cat_loss_name == "BCE": # similar to original: mistke of using log softmax twice
-            log_xhat = torch.log_softmax(logits, dim=-1)
-            x_CE = F.binary_cross_entropy_with_logits(log_xhat, x, reduction='none').sum(2).mean(1)
-
-        reconstruct_loss = x_CE
-
-        log_xhat = torch.log_softmax(logits, dim=-1)
-        
-        x_mse = F.mse_loss(log_xhat.exp(), x.type_as(log_xhat), reduction="none").mean(-1).mean(1)
-
-        warm_up_scale = annealing_factor(self.training_parameters["annealing_warm_up"], self.the_training_step)
-
-        neg_ELBO = self.training_parameters['kl_latent_scale']*KLD_latent *warm_up_scale + reconstruct_loss
-
-        return neg_ELBO, KLD_latent, x_CE
-
+    
     def validation_step(self, batch, batch_idx, dataloader_idx=0):
         """
         Returns tensors of ELBO, reconstruction loss and KL divergence for each point in batch x.
@@ -187,20 +134,27 @@ class lightningdmsEVE(L.LightningModule):
         dataloader_name = self.trainer.val_dataloaders_info["name"][dataloader_idx]
         if not (dataloader_name.startswith("dms")):
             x = self.get_input_data(batch)
-            xhat, latent_output = self.model.forward(x,stochastic_latent=False)
-            neg_ELBO, KLD_latent, x_CE = self.loss_function(xhat, x, latent_output, reconstruction_error=self.model.reconstruction_error)
-            
+            neg_ELBO, latent_output, x_CE = self.model.compute_loss(x,stochastic_latent=False, kl_global_params_scale=0, beta=1)
 
             log_dict = {"val_neg_ELBO": neg_ELBO.mean(),  
-                        "val_KLD_latent": KLD_latent.mean(),  
+                        "val_KLD_latent": latent_output["KLD"].mean(),  
                         "val_x_CE": x_CE.mean(),
                         "val_mu": latent_output["mu"].mean(),
                         }
             
-            #log_dict = {**log_dict, "hp/x_mse/val": self.best_val_mse}
             self.val_scores_msa[dataloader_name] = log_dict
 
+            if batch_idx == -1:
+                self.val_boxplot_figure[1].cla()
+                self.val_boxplot_figure[1].boxplot(latent_output["mu"].T.cpu().tolist())
+                self.val_boxplot_figure[1].set_title("$\\tau={:.04f}$".format(self.model.matVAE.tau.item()))
+                self.val_boxplot_figure[1].set_xlabel("Category")
+                self.val_boxplot_figure[1].set_ylabel("Category probability")
+                self.val_boxplot_figure[1].set_ylim([0,1])
+                self.logger.experiment.add_figure("z_boxplot/val/{}".format(dataloader_name), self.val_boxplot_figure[0], self.the_training_step)
+
             if (batch_idx == self.plot_batch_index):
+                xhat, latent_output = self.model.forward(x, stochastic_latent=False)
                 isample = 0
                 axes = self.val_x_recon_figure[1]
                 axes[1].cla()
@@ -209,46 +163,39 @@ class lightningdmsEVE(L.LightningModule):
                 if ("transformers_yout" in latent_output.keys()):
                     axes[1].imshow(latent_output["transformers_yout"][isample].detach().exp().cpu(), aspect="auto")
                 else:
-                    axes[1].imshow(log_recon[isample].detach().exp().cpu(), aspect="auto",vmin=0,vmax=1)
+                    axes[1].imshow(log_recon[isample].detach().exp().cpu(), aspect="auto", vmin=0, vmax=1)
                 axes[0].scatter(range(latent_output["z"].shape[0]),latent_output["z"][:,0].detach().cpu())
                 axes[0].set_xlabel("Sample")
                 axes[0].set_ylabel("Component 0")
 
                 self.logger.experiment.add_figure("z_comp0-trans_x_im/{}".format(dataloader_name), self.val_x_recon_figure[0], self.the_training_step)
         
-        # If dataloaders of DMS data
-        else:
+        else:        # If dataloaders of DMS data
             x_wt = batch["x_wt"].to(torch.float)
             x = batch["x"].to(torch.float)
-            y_true_dms = batch[self.training_parameters["latent_to_dms_target"]]
+            score_str = self.training_parameters["latent_to_dms_target"]
             
-
-            # Find identical one hot vector components between variant and WT.
-            not_varied_aa_comp = ((x - x_wt) == 0)
-
-            x_aa_idx  = x.argmax(-1)
-            x_wt_aa_idx  = x_wt.argmax(-1)
-            #site_independent = self.trainer.grantham_matrix[x_aa_idx, x_wt_aa_idx]
-            # Count the number of different AA, i.e. the number of variants at a position
-            n_variants = ((x_aa_idx - x_wt_aa_idx) != 0).sum(-1)
-
-            D = -self.model.grantham_matrix[x_aa_idx, x_wt_aa_idx].sum(1) / n_variants
+            y_true_dms = torch.concat([batch[ss].to(torch.float).unsqueeze(-1) for ss in score_str.split("+")],dim=-1)
+            #y_true_dms = batch[self.training_parameters["latent_to_dms_target"]]
             
-            # Forward pass with data
-            xhat, latent_output = self.model.forward(x, stochastic_latent=False)
-            neg_ELBO, KLD_latent, x_CE = self.loss_function(xhat, x, latent_output,reconstruction_error=self.model.reconstruction_error)
+            neg_ELBO, latent_output, _ = self.model.compute_loss(x, stochastic_latent=False, kl_global_params_scale=0, beta=1)
+
+            # neg_ELBO, KLD_latent, x_CE = self.loss_function(xhat, x, latent_output,reconstruction_error=self.model.reconstruction_error)
             elbo, y_hat_dms = -neg_ELBO, latent_output["y_hat_dms"]
-
-            # Forward pass with WT
-            xhat_wt, latent_output_wt = self.model.forward(x_wt, stochastic_latent=False)
-            neg_ELBO_wt, KLD_latent_wt, x_CE = self.loss_function(xhat_wt, x_wt, latent_output_wt, reconstruction_error=self.model.reconstruction_error)
-            ELBO_WT, y_hat_dms_wt =-neg_ELBO_wt, latent_output_wt["y_hat_dms"]
             
-            ypred = (1 - self.training_parameters["model_mixing"])*(elbo - ELBO_WT) + (self.training_parameters["model_mixing"])*D
+            # Forward pass with WT
+            #xhat_wt, latent_output_wt = self.model.forward(x_wt, stochastic_latent=False)
+            #neg_ELBO_wt, KLD_latent_wt, x_CE = self.loss_function(xhat_wt, x_wt, latent_output_wt, reconstruction_error=self.model.reconstruction_error)
+            
+            neg_ELBO_wt, latent_output_wt, _ = self.model.compute_loss(x_wt, stochastic_latent=False, kl_global_params_scale=0, beta=1)
+            ELBO_WT, y_hat_dms_wt = -neg_ELBO_wt, latent_output_wt["y_hat_dms"]
+            
+            #ypred = (1 - self.training_parameters["model_mixing"])*(elbo - ELBO_WT) + (self.training_parameters["model_mixing"])*D
+            ypred = elbo - ELBO_WT
             
             # Define Elbo based on dms target
-            elbo_dmstarget = F.mse_loss(y_hat_dms, y_true_dms[:, None]) + self.training_parameters["kl_latent_scale"] * KLD_latent
-            elbo_wt_dmstarget = y_hat_dms_wt.pow(2).mean() + self.training_parameters["kl_latent_scale"] * KLD_latent_wt
+            elbo_dmstarget = F.mse_loss(y_hat_dms, y_true_dms) + latent_output["KLD"]
+            elbo_wt_dmstarget = y_hat_dms_wt.pow(2).mean() + latent_output_wt["KLD"]
 
             ypred_dmstarget = elbo_dmstarget - elbo_wt_dmstarget
 
@@ -258,7 +205,7 @@ class lightningdmsEVE(L.LightningModule):
                 self.val_scores_dms[dataloader_name] = []
             
             # Save batch scores for later
-            self.val_scores[dataloader_name].append(torch.cat([ypred[:, None], batch["target"][:, None], batch["target_bin"][:, None], elbo[:, None], ELBO_WT[:, None], y_hat_dms, y_true_dms[:, None], ypred_dmstarget[:,None]], dim=1))
+            self.val_scores[dataloader_name].append(torch.cat([ypred[:, None], batch["target"][:, None], batch["target_bin"][:, None], elbo[:, None], ELBO_WT[:, None], y_hat_dms[:,[0]], y_true_dms[:,[0]], ypred_dmstarget[:,None]], dim=1))
 
     def on_validation_epoch_end(self):
         if all([len(v)>0 for v in self.val_scores.values()]):
@@ -279,7 +226,6 @@ class lightningdmsEVE(L.LightningModule):
                             **{"{}/{}/dmsELBO".format(score_name, dataloader_name): score_value for score_name,score_value in thescores_predictions_elbodmstarget.items()}
                             }
                 
-                #if idataset == 0:
                 log_dict["hp/earlystop_metric"] = thescores["spearmanr"]
 
                 if self.plot_elbos:
@@ -306,7 +252,7 @@ class lightningdmsEVE(L.LightningModule):
         # Move all the scores to cpu
         self.val_scores_msa = {k1:{k2:v.item() if not (isinstance(v,float)) else v for k2,v in self.val_scores_msa[k1].items()} for k1 in self.val_scores_msa.keys()}
         log_dict = pd.DataFrame(self.val_scores_msa).mean(1).to_dict()
-        
+        log_dict["tau"] = self.model.matVAE.tau
         self.log_dict(log_dict)
         ###self.val_scores_msa = {k:[] for k in self.trainer.val_dataloaders_info["name"] if not k.startswith("dms")}
     

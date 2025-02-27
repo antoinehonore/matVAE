@@ -95,6 +95,7 @@ tranception_ACT2FN = {
     "relu": torch.nn.functional.relu,
     "silu": silu,
     "selu": torch.nn.SELU(),
+    "leakyrelu": torch.nn.LeakyReLU(),
     "swish": silu,
     "gelu": gelu,
     "tanh": torch.tanh,

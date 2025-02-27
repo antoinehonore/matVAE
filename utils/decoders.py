@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from utils.activations import tranception_ACT2FN
-from utils.mlp import create_nn_sequential_MLP
+from utils.mlp import MLP
 from torch import Tensor
 import numpy as np
 from scipy.special import erfinv
@@ -218,7 +218,7 @@ class VAE_Bayesian_MLP_decoder(torch.nn.Module):
 
     def _get_KLD_from_param(self, mu, log_sigma) -> Tensor:
         """ KL divergence between two Diagonal Gaussians """
-        return torch.sum(-self._KLD_diag_gaussians(mu.flatten(), log_sigma.flatten(), 0., 0.))
+        return torch.sum(self._KLD_diag_gaussians(mu.flatten(), log_sigma.flatten(), 0., 0.))
 
     def get_KL_div(self):
         KL_div = 0
@@ -257,7 +257,7 @@ class simple_mlp_decoder(torch.nn.Module):
         # Remove the first dropout, and last activation
         # Make sure that the first linear has input dimension> z_dim
         # Make sure that the last linear has input dimenesion> input_size
-        self.model = create_nn_sequential_MLP(self.z_dim, self.layers_sizes, self.input_size, self.activation,dropout_p=self.dropout_p)
+        self.model = MLP(self.z_dim, self.layers_sizes, self.input_size, self.activation,dropout_p=self.dropout_p)
 
         #self.model = torch.nn.Sequential(*sum([[torch.nn.Dropout(self.dropout_p),
         #                                            torch.nn.Linear(self.z_dim if i==0 else self.layers_sizes[i-1],

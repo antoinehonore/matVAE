@@ -1,5 +1,19 @@
 import torch
-from utils.activations import get_activation
+
+
+def init_all(model, init_func, *params, **kwargs):
+    for p in model.parameters():
+        if p.requires_grad:
+            #rand_int=torch.randint(-2,2,()).item()
+            #rand_int=(torch.rand(1).item())*2-1
+            #init_func(p, *params, **{k:v+rand_int for k,v in kwargs.items()})
+            if p.ndim > 1:# Weight tensors
+                init_func(p, *params, **kwargs)
+            else: # Biases
+                torch.nn.init.constant_(p,0.01)
+            #p.data = torch.nn.functional.normalize(p,dim=-1).data
+            #torch.nn.utils.weight_norm(p,name='weight',dim=1)
+
 
 class MLP(torch.nn.Module):
     def __init__(self,input_size, layers_sizes, output_size, activation, dropout_p=0, layernorm=False, skipconnections=False, skiptemperature=False):
@@ -30,12 +44,13 @@ class MLP(torch.nn.Module):
         self.linear_layers = torch.nn.ModuleList(self.linear_layers)
         if self.skiptemperature:
             self.skiptemperature_params = torch.nn.ParameterList([torch.zeros(1) for _ in range(len(self.linear_layers))])
+            self.skiptemperature_params.requires_grad_(False)
             
         
         if self.skipconnections:
             self.linear_layers_skip = torch.nn.ModuleList(self.linear_layers_skip)
     
-    @torch.compile(mode="default")
+    #@torch.compile(mode="default")
     def forward(self, x):
         """An MLP with skipconnections, layer normalizations, and dropout
             
@@ -60,13 +75,13 @@ class MLP(torch.nn.Module):
             
             # Normalize
             possible_to_normalize = (xout.ndim == 2) and (xout.shape[1] != 1)
+            possible_to_skip = self.skipconnections and (xout.shape == x.shape)
 
             if self.layernorm and possible_to_normalize:
                 # If we are not at the last layer, or we required skip connections 
-                if (not is_last_layer) or (self.skipconnections):
+                if (not is_last_layer) or possible_to_skip:# (self.skipconnections):
                     xout = torch.nn.functional.layer_norm(xout, normalized_shape=xout.shape[1:])
             
-            possible_to_skip = self.skipconnections and (xout.shape == x.shape)
             if possible_to_skip:
                 # Activation
                 xout = self.activation_function(xout)
@@ -88,34 +103,3 @@ class MLP(torch.nn.Module):
                 # Activation
                 x = self.activation_function(x)
         return x
-
-
-
-def create_nn_sequential_MLP(input_size, layers_sizes, output_size, activation, dropout_p=0):
-    # Sequence of dropout -> linear -> activation
-    ## Remove the first dropout, and last activation
-    ## Make sure that the first linear has input dimension> input_size
-    ## Make sure that the last linear has output dimension> output_size
-    #self.input_size, self.layers_sizes, self.output_size, self.activation = input_size, layers_sizes, output_size, activation
-    #self.dropout_p = dropout_p
-    #self.activation_function = activation()
-
-    #self.dropout_function = torch.nn.Dropout(dropout_p)
-    
-    #self.linear_layers = []
-    #for i in range(len(layers_sizes)+1):
-    #    layer_in_size = input_size if i==0 else layers_sizes[i-1]
-    #    layer_out_size = layers_sizes[i] if i < (len(layers_sizes)) else output_size
-
-    #self.linear_layers.append(torch.nn.Linear(layer_in_size, layer_out_size))
-        
-    #out = torch.nn.Sequential(*sum([[torch.nn.Dropout(dropout_p),
-    #                                            torch.nn.Linear(input_size if i==0 else layers_sizes[i-1],
-    #                                            layers_sizes[i] if i < (len(layers_sizes)) else output_size
-    #                                            ),
-    #                                            activation(), 
-    #                                            torch.nn.LayerNorm()
-    #                                            ]
-    #                                        for i in range(len(layers_sizes)+1)],[])[1:-1])
-    #return out
-    pass

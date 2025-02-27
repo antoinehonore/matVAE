@@ -25,7 +25,7 @@ def get_data_subset_indexes(thedataset, train_val_idxes, protein_name, dataset_n
 
     the_indexes = train_val_idxes[protein_name][dataset_name][fold_idx][subset]
     if verbose:
-        print(protein_name, dataset_name, "subset={}, fold={}, #={}".format(subset, fold_idx, the_indexes.shape[0]))
+        print(protein_name, dataset_name, "subset={}, fold={}, #={}".format(subset, fold_idx, the_indexes.shape[0] if not (the_indexes is None) else None))
     
     if not (the_indexes is None):
         return Subset(thedataset, the_indexes) 
@@ -52,7 +52,7 @@ def get_train_val_idxes(n, validation_set_pct,random_state=None):
                         random_state=random_state)
     return out
 
-def prepare_msa_dataloaders(all_MSA_datasets, training_proteins,test_proteins,num_workers,pin_memory, model_params, validation_set_pct=0.2,persistent_workers=False):
+def prepare_msa_dataloaders(all_MSA_datasets, training_proteins,test_proteins,num_workers,pin_memory, model_params, validation_set_pct=0.2,persistent_workers=False,random_state=None):
     training_parameters = model_params["training_parameters"]
     if training_proteins.to_frame()["protein_name"].shape[0]==1:
         model_params["model_parameters"]["protein_name"] = training_proteins.to_frame()["protein_name"][0]
@@ -61,7 +61,7 @@ def prepare_msa_dataloaders(all_MSA_datasets, training_proteins,test_proteins,nu
         all_MSA_datasets[k].protein_name = k
 
     # Training/validation indexes
-    train_val_idxes = {k: get_train_val_idxes(len(v),validation_set_pct) for k,v in all_MSA_datasets.items()}
+    train_val_idxes = {k: get_train_val_idxes(len(v),validation_set_pct,random_state=random_state) for k,v in all_MSA_datasets.items()}
 
     ## Get the training and validation subsets of the training proteins
     train_MSA_prot_dataset = {k: Subset(all_MSA_datasets[k],train_val_idxes[k][0]) for k in training_proteins}
@@ -229,7 +229,7 @@ class TheDatasetDMS(Dataset):
         #out["protein_name"] = self.protein_name
         #out["focus_cols"] = self.a_focus_cols
 
-        out = {**out, "target": self.y[idx], "target_bin": self.ybin[idx]}#, "target_rank": self.y_rank[idx], "target_rel_rank": self.y_rank[idx]/self.y_rank.shape[0],"target_scaled": self.y_scaled[idx]}
+        out = {**out, "target": self.y[idx], "target_bin": self.ybin[idx], "target_rank": self.y_rank[idx], "target_rel_rank": self.y_rank[idx]/self.y_rank.shape[0],"target_scaled": self.y_scaled[idx]}
 
         if not (self.x_wt is None):
             out = {**out, "x_wt": self.x_wt}
@@ -338,7 +338,7 @@ def get_protein_data(protein_name, msa_location, weight_location, theta, data_pa
             MSA_location=msa_location,
             theta=theta,
             use_weights=True,
-            threshold_focus_cols_frac_gaps=0.3,
+            threshold_focus_cols_frac_gaps=1,
             weights_location=weight_location,
             nlim=mse_nlim
     )
